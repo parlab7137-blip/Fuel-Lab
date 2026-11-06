@@ -1,16 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { getUserById, type DbUser } from './db';
+import { getStoredJwtSecret, getUserById, type DbUser } from './db';
 
+/**
+ * Token-signing secret: JWT_SECRET if set, otherwise the random one the server created and
+ * keeps in the database (see loadJwtSecret in db.ts). Every API request opens the database
+ * first, so the stored secret is always there by the time a token is signed or checked.
+ */
 export function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET must be set in production');
-    }
-    console.warn('[warn] JWT_SECRET not set; using an insecure default secret. Set JWT_SECRET in production.');
-    return 'dev-secret-change-me';
-  }
+  const secret = process.env.JWT_SECRET || getStoredJwtSecret();
+  if (!secret) throw new Error('Signing secret not loaded: the database is not open yet');
   return secret;
 }
 

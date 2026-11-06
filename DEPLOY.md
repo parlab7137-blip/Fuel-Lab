@@ -9,10 +9,10 @@ The web app is served by Vercel as static files. The API runs as one Vercel func
 | -------------------- | -------------------------------------------------------- |
 | `TURSO_DATABASE_URL` | `libsql://<db-name>-<org>.turso.io` (from Turso)         |
 | `TURSO_AUTH_TOKEN`   | database token from Turso                                |
-| `JWT_SECRET`         | long random string (keep it secret; changing it logs everyone out) |
+| `JWT_SECRET`         | optional: long random string. If unset, the server makes one and keeps it in the database. Changing it logs everyone out |
 | `NODE_ENV`           | `production`                                             |
 
-Generate a `JWT_SECRET`:
+To set your own `JWT_SECRET`, generate one with:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"

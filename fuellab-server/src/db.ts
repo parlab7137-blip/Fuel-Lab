@@ -1,7 +1,7 @@
 import type { Client, InStatement, InValue } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import type {
   DayLogEntry,
   Ingredient,
@@ -157,6 +157,10 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS idx_plan_user_week ON plan_items(user_id, week_start)',
   'CREATE INDEX IF NOT EXISTS idx_log_user_date ON day_log(user_id, date)',
   'CREATE INDEX IF NOT EXISTS idx_recipes_owner ON recipes(owner_id)',
+  `CREATE TABLE IF NOT EXISTS app_secrets (
+  name TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`,
 ];
 
 /** Household defaults for new accounts. */
@@ -166,6 +170,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 let client: Client | null = null;
+let storedJwtSecret: string | null = null;
 let ready: Promise<void> | null = null;
 
 /**
@@ -198,6 +203,7 @@ export function openDatabase(): Promise<void> {
       const c: Client = lib.createClient({ url, authToken });
       await c.batch(SCHEMA, 'write');
       await seedRecipes(c);
+      storedJwtSecret = await loadJwtSecret(c);
       client = c;
     })().catch((err) => {
       ready = null; // let the next request retry instead of failing forever
@@ -205,6 +211,25 @@ export function openDatabase(): Promise<void> {
     });
   }
   return ready;
+}
+
+/**
+ * The token-signing secret kept in the database, created on first boot. Used when the
+ * JWT_SECRET environment variable isn't set, so a deploy works without one. INSERT OR IGNORE
+ * keeps two instances starting at once from ending up with different secrets.
+ */
+async function loadJwtSecret(c: Client): Promise<string> {
+  await c.execute({
+    sql: "INSERT OR IGNORE INTO app_secrets (name, value) VALUES ('jwt', ?)",
+    args: [randomBytes(32).toString('hex')],
+  });
+  const rs = await c.execute("SELECT value FROM app_secrets WHERE name = 'jwt'");
+  return String(rs.rows[0][0]);
+}
+
+/** The database-kept signing secret (null until the database is open). */
+export function getStoredJwtSecret(): string | null {
+  return storedJwtSecret;
 }
 
 /** Inserts the starter recipe box once (the whole box is one transaction). */

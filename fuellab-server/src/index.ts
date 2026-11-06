@@ -15,8 +15,19 @@ export function buildApp(): express.Express {
 
   // Connect, create the schema and seed before any API request. On Vercel this runs once per
   // function instance; locally it has already finished by the time start() listens.
-  app.use('/api', async (_req: Request, _res: Response, next: NextFunction) => {
-    await openDatabase();
+  // If the database can't be reached, say so plainly (the web app shows this message) instead
+  // of a bare "Internal server error"; the full error goes to the server log.
+  app.use('/api', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      await openDatabase();
+    } catch (err) {
+      console.error('Database connection failed:', err);
+      res.status(503).json({
+        error:
+          "FuelLab can't reach its database. In Vercel, check TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, then redeploy.",
+      });
+      return;
+    }
     next();
   });
 
@@ -73,7 +84,6 @@ export function buildApp(): express.Express {
 
 export async function start(): Promise<void> {
   await openDatabase();
-  getJwtSecret(); // warns in dev, throws in production without a secret
   const port = Number(process.env.PORT) || 4000;
   const app = buildApp();
   app.listen(port, () => {
