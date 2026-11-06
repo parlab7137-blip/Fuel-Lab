@@ -10,6 +10,24 @@ import shoppingRoutes from './routes/shopping';
 import logRoutes from './routes/log';
 import settingsRoutes from './routes/settings';
 
+/**
+ * What the server can see of its database settings, for fixing a deploy: which related
+ * variable NAMES exist and whether each is empty, plus which deployment is answering.
+ * Never includes a value.
+ */
+function databaseDiagnostics() {
+  const related = Object.keys(process.env)
+    .filter((k) => /turso|libsql|database/i.test(k))
+    .sort()
+    .map((k) => `${k}${(process.env[k] ?? '').trim() ? '' : ' (empty)'}`);
+  return {
+    variablesSeen: related,
+    vercelEnvironment: process.env.VERCEL_ENV ?? null,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
+    deploymentHost: process.env.VERCEL_URL ?? null,
+  };
+}
+
 export function buildApp(): express.Express {
   const app = express();
 
@@ -22,7 +40,7 @@ export function buildApp(): express.Express {
       await openDatabase();
     } catch (err) {
       console.error('Database connection failed:', err);
-      res.status(503).json({ error: describeDatabaseError(err) });
+      res.status(503).json({ error: describeDatabaseError(err), diagnostics: databaseDiagnostics() });
       return;
     }
     next();
