@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { openDatabase, toPublicUser } from './db';
+import { describeDatabaseError, openDatabase, toPublicUser } from './db';
 import { authMiddleware, getJwtSecret } from './auth';
 import authRoutes from './routes/auth';
 import recipesRoutes from './routes/recipes';
@@ -22,10 +22,7 @@ export function buildApp(): express.Express {
       await openDatabase();
     } catch (err) {
       console.error('Database connection failed:', err);
-      res.status(503).json({
-        error:
-          "FuelLab can't reach its database. In Vercel, check TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, then redeploy.",
-      });
+      res.status(503).json({ error: describeDatabaseError(err) });
       return;
     }
     next();

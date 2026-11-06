@@ -232,31 +232,62 @@ export function getStoredJwtSecret(): string | null {
   return storedJwtSecret;
 }
 
-/** Inserts the starter recipe box once (the whole box is one transaction). */
+/**
+ * Inserts any starter recipes that aren't in the database yet, ten recipes per request so no
+ * single request to Turso gets too big. Each recipe goes in with its ingredients, and every
+ * insert is skipped if the row is already there, so an interrupted or doubled run is harmless.
+ */
 async function seedRecipes(c: Client): Promise<void> {
-  const rs = await c.execute('SELECT COUNT(*) AS n FROM recipes WHERE owner_id IS NULL');
-  if (Number(rs.rows[0][0]) > 0) return;
+  const rs = await c.execute('SELECT id FROM recipes WHERE owner_id IS NULL');
+  const have = new Set(rs.rows.map((row) => String(row[0])));
+  const missing = SEED_RECIPES.filter((r) => !have.has(r.id));
+  if (missing.length === 0) return;
   const now = nowIso();
-  const stmts: InStatement[] = [];
-  for (const r of SEED_RECIPES) {
-    stmts.push({
-      sql: `INSERT OR IGNORE INTO recipes (id, owner_id, name, meal_type, base_servings, yield_text, prep_minutes, cook_minutes,
-        description, source_name, source_url, instructions, calories, protein, carbs, fat, is_custom, created_at)
-        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      args: [
-        r.id, r.name, r.mealType, r.baseServings, r.yieldText, r.prepMinutes, r.cookMinutes,
-        r.description, r.sourceName, r.sourceUrl, r.instructions, r.calories, r.protein, r.carbs, r.fat, now,
-      ],
-    });
-    r.ingredients.forEach((ing, i) =>
+  for (let start = 0; start < missing.length; start += 10) {
+    const stmts: InStatement[] = [];
+    for (const r of missing.slice(start, start + 10)) {
       stmts.push({
-        sql: 'INSERT INTO ingredients (recipe_id, name, amount, unit, section, position) VALUES (?, ?, ?, ?, ?, ?)',
-        args: [r.id, ing.name, ing.amount, ing.unit, ing.section, i],
-      }),
-    );
+        sql: `INSERT OR IGNORE INTO recipes (id, owner_id, name, meal_type, base_servings, yield_text, prep_minutes, cook_minutes,
+          description, source_name, source_url, instructions, calories, protein, carbs, fat, is_custom, created_at)
+          VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+        args: [
+          r.id, r.name, r.mealType, r.baseServings, r.yieldText, r.prepMinutes, r.cookMinutes,
+          r.description, r.sourceName, r.sourceUrl, r.instructions, r.calories, r.protein, r.carbs, r.fat, now,
+        ],
+      });
+      r.ingredients.forEach((ing, i) =>
+        stmts.push({
+          sql: `INSERT INTO ingredients (recipe_id, name, amount, unit, section, position)
+            SELECT ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ingredients WHERE recipe_id = ? AND position = ?)`,
+          args: [r.id, ing.name, ing.amount, ing.unit, ing.section, i, r.id, i],
+        }),
+      );
+    }
+    await c.batch(stmts, 'write');
   }
-  await c.batch(stmts, 'write');
-  console.log(`[seed] inserted ${SEED_RECIPES.length} starter recipes`);
+  console.log(`[seed] inserted ${missing.length} starter recipes`);
+}
+
+/**
+ * A plain-words reason the database couldn't be opened, for the sign-in screen. Never
+ * includes the token; the full error goes to the server log.
+ */
+export function describeDatabaseError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!process.env.TURSO_DATABASE_URL && !process.env.DATABASE_URL && process.env.VERCEL) {
+    return "FuelLab isn't connected to a database: TURSO_DATABASE_URL isn't set in Vercel (Production). Add it, then redeploy.";
+  }
+  // Turso answers a bad, revoked or mangled token with HTTP 400 or 401.
+  if (/unauthori[sz]ed|status 40[01]\b|jwt|token/i.test(msg)) {
+    return "Turso refused FuelLab's token. In Vercel, replace TURSO_AUTH_TOKEN with a new full-access token for the fuel-lab database, then redeploy.";
+  }
+  if (/read.?only|readonly|permission|forbidden|403/i.test(msg)) {
+    return "FuelLab's Turso token is read-only. Create a full-access token, put it in TURSO_AUTH_TOKEN in Vercel, then redeploy.";
+  }
+  if (/ENOTFOUND|getaddrinfo|not found|404|URL_INVALID|invalid url/i.test(msg)) {
+    return "FuelLab can't find its Turso database. Check that TURSO_DATABASE_URL in Vercel is exactly the libsql:// address from Turso, then redeploy.";
+  }
+  return "FuelLab can't reach its database (" + msg.replace(/eyJ[w.-]+/g, "[token]").slice(0, 160) + "). Check the Turso settings in Vercel, then redeploy.";
 }
 
 function db(): Client {
