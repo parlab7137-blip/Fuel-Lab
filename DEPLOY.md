@@ -64,7 +64,7 @@ or use **Redeploy** in the Vercel dashboard.
 
 ## First deploy checklist
 
-1. Create an empty GitHub repo (e.g. `parlab7137-blip/FuelLab`) and push `main`.
+1. GitHub repo: `parlab7137-blip/Fuel-Lab` (https://github.com/parlab7137-blip/Fuel-Lab).
 2. Turso: create a database (e.g. `fuellab`), then copy its URL and create a token.
 3. Vercel: **Add New → Project**, import the repo. Leave **Root Directory** empty and set
    **Framework Preset** to **Other** (Vercel may guess Express; that skips the shared build).
