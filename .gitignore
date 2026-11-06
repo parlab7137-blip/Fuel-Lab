@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Local database and user data: never commit
+fuellab-server/data/
+*.db
+*.db-*
+*.xlsx
+*.xls
+*.csv
+
+# Original upload archives and local tooling
+*.zip
+.claude/

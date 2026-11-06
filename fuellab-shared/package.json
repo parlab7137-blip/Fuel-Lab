@@ -1,0 +1,16 @@
+{
+  "description": "Shared types and helpers for FuelLab (web, mobile, server).",
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  },
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "name": "@fuellab/shared",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "node test/run.mjs"
+  },
+  "types": "dist/index.d.ts",
+  "version": "1.0.0"
+}

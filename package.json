@@ -1,0 +1,19 @@
+{
+  "name": "fuellab",
+  "private": true,
+  "description": "FuelLab: household meal planning, shopping lists and a plan-driven calorie counter (shared logic, API server, web app).",
+  "workspaces": [
+    "fuellab-shared",
+    "fuellab-server",
+    "fuellab-web"
+  ],
+  "scripts": {
+    "build": "npm run build -w @fuellab/shared && npm run build -w fuellab-web && npm run build -w @fuellab/server",
+    "test": "npm test -w @fuellab/shared",
+    "start": "npm start -w @fuellab/server",
+    "dev:web": "npm run dev -w fuellab-web"
+  },
+  "engines": {
+    "node": "22.x || 24.x"
+  }
+}
