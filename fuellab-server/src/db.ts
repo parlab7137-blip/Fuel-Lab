@@ -178,10 +178,18 @@ let ready: Promise<void> | null = null;
  *  - Turso (production): TURSO_DATABASE_URL (libsql://...) + TURSO_AUTH_TOKEN.
  *    DATABASE_URL / DATABASE_AUTH_TOKEN are accepted as aliases.
  *  - Local: a SQLite file, DATABASE_PATH (default ./data/fuellab.db).
+ * Names are matched ignoring capitals (Turso_Database_Url works too), and values are trimmed,
+ * because both are easy to get slightly wrong when typing them into a dashboard.
  */
+export function env(name: string): string | undefined {
+  const key = Object.keys(process.env).find((k) => k.toUpperCase() === name);
+  const value = key ? process.env[key]?.trim() : undefined;
+  return value || undefined;
+}
+
 function dbConfig(): { url: string; authToken?: string } {
-  const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN || undefined;
+  const url = env('TURSO_DATABASE_URL') || env('DATABASE_URL');
+  const authToken = env('TURSO_AUTH_TOKEN') || env('DATABASE_AUTH_TOKEN');
   if (url) return { url, authToken };
   const dbPath = path.resolve(process.env.DATABASE_PATH || './data/fuellab.db');
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -274,7 +282,7 @@ async function seedRecipes(c: Client): Promise<void> {
  */
 export function describeDatabaseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (!process.env.TURSO_DATABASE_URL && !process.env.DATABASE_URL && process.env.VERCEL) {
+  if (!env('TURSO_DATABASE_URL') && !env('DATABASE_URL') && process.env.VERCEL) {
     return "FuelLab isn't connected to a database: TURSO_DATABASE_URL isn't set in Vercel (Production). Add it, then redeploy.";
   }
   // Turso answers a bad, revoked or mangled token with HTTP 400 or 401.

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { getStoredJwtSecret, getUserById, type DbUser } from './db';
+import { env, getStoredJwtSecret, getUserById, type DbUser } from './db';
 
 /**
  * Token-signing secret: JWT_SECRET if set, otherwise the random one the server created and
@@ -8,7 +8,7 @@ import { getStoredJwtSecret, getUserById, type DbUser } from './db';
  * first, so the stored secret is always there by the time a token is signed or checked.
  */
 export function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET || getStoredJwtSecret();
+  const secret = env('JWT_SECRET') || getStoredJwtSecret();
   if (!secret) throw new Error('Signing secret not loaded: the database is not open yet');
   return secret;
 }
