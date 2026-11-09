@@ -15,5 +15,11 @@
   },
   "engines": {
     "node": "22.x || 24.x"
+  },
+  "overrides": {
+    "rollup": "4.63.5"
+  },
+  "devDependencies": {
+    "rollup": "^4.63.5"
   }
 }

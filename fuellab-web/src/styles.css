@@ -188,5 +188,20 @@ button.strip-day.active { border-color: var(--green); background: #eef6f0; }
     flex: 1; padding: 10px 2px; font-size: 13px; border-radius: 10px;
   }
   main { padding: 16px 14px calc(84px + env(safe-area-inset-bottom)); }
+  .week { grid-template-columns: 1fr; }
+  .plan-item { font-size: 14px; padding: 8px 10px; }
   .update-banner { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
+
+/* Today: planned meals are tappable cards; meal type gets its own line above the name */
+.today-list li.planned { align-items: center; padding: 0; overflow: hidden; }
+.planned-open {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  border: none; background: none; border-radius: 0; padding: 12px 14px; text-align: left; color: inherit;
+}
+.planned-open:hover { background: #f3f7f4; }
+.planned-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.planned-name { font-weight: 700; font-size: 16px; line-height: 1.3; }
+.planned-link { color: var(--green); font-weight: 600; font-size: 13px; }
+.today-list li.planned > .small-btn, .today-list li.planned > .badge { margin-right: 14px; flex: none; }
+.detail-note { background: #e8f2ea; color: var(--green-dark); border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }

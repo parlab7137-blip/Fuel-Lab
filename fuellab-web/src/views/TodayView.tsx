@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { addDays, type DayTotals, type Targets, type TodayResponse, type WeekLogDay } from '@fuellab/shared';
+import { addDays, type DayTotals, type Recipe, type Targets, type TodayResponse, type WeekLogDay } from '@fuellab/shared';
 import { api, todayLocal } from '../api';
+import { RecipeDetail } from './RecipesView';
 
 function Ring({ value, target }: { value: number; target: number }) {
   const pct = target > 0 ? Math.min(1, value / target) : 0;
@@ -69,6 +70,21 @@ export default function TodayView() {
   const [week, setWeek] = useState<WeekLogDay[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [quick, setQuick] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' });
+  const [open, setOpen] = useState<{ recipe: Recipe; servings: number } | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  // Planned meals carry only a summary, so fetch the full recipe (ingredients, method) on tap.
+  const openRecipe = async (recipeId: string, servings: number) => {
+    setOpening(recipeId);
+    try {
+      const { recipe } = await api.getRecipe(recipeId);
+      setOpen({ recipe, servings });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setOpening(null);
+    }
+  };
 
   const load = () => {
     api
@@ -135,16 +151,25 @@ export default function TodayView() {
       {today.planned.length === 0 && <p className="muted">Nothing planned — add meals in the Planner.</p>}
       <ul className="today-list">
         {today.planned.map(({ planItem, logEntryId }) => (
-          <li key={planItem.id}>
-            <span>
-              <span className="badge">{planItem.recipe.mealType}</span> {planItem.recipe.name}
-              {planItem.recipe.isCustom && <span className="badge yours">Yours</span>}{' '}
+          <li key={planItem.id} className="planned">
+            <button
+              type="button"
+              className="planned-open"
+              onClick={() => openRecipe(planItem.recipeId, planItem.servings)}
+              aria-label={`View recipe: ${planItem.recipe.name}`}
+            >
+              <span className="planned-tags">
+                <span className="badge">{planItem.recipe.mealType}</span>
+                {planItem.recipe.isCustom && <span className="badge yours">Yours</span>}
+              </span>
+              <span className="planned-name">{planItem.recipe.name}</span>
               <span className="muted small">
                 {planItem.recipe.macros.calories != null
-                  ? `${planItem.recipe.macros.calories} kcal · ${planItem.recipe.macros.protein ?? '—'}g protein per serving`
-                  : 'macros not listed'}
+                  ? `${planItem.recipe.macros.calories} kcal · ${planItem.recipe.macros.protein ?? "—"}g protein per serving`
+                  : "Macros not listed"}
               </span>
-            </span>
+              <span className="planned-link">{opening === planItem.recipeId ? "Opening…" : "View recipe ›"}</span>
+            </button>
             {logEntryId ? (
               <span className="badge hp">✓ Logged</span>
             ) : (
@@ -155,6 +180,13 @@ export default function TodayView() {
           </li>
         ))}
       </ul>
+      {open && (
+        <RecipeDetail
+          recipe={open.recipe}
+          note={`Planned for today: ${open.servings} serving${open.servings === 1 ? "" : "s"}`}
+          onClose={() => setOpen(null)}
+        />
+      )}
 
       <h3>Logged</h3>
       {today.entries.length === 0 && <p className="muted">Nothing logged yet today.</p>}

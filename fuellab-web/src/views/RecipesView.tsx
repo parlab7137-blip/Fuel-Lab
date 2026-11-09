@@ -108,12 +108,24 @@ export default function RecipesView() {
   );
 }
 
-function RecipeDetail({ recipe, onClose, onDeleted }: { recipe: Recipe; onClose: () => void; onDeleted: () => void }) {
+/** Full recipe card in a pop-up. Without onDeleted (e.g. opened from Today) it has no delete button. */
+export function RecipeDetail({
+  recipe,
+  onClose,
+  onDeleted,
+  note,
+}: {
+  recipe: Recipe;
+  onClose: () => void;
+  onDeleted?: () => void;
+  /** A line shown under the badges, e.g. how many servings are planned. */
+  note?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const remove = async () => {
     try {
       await api.deleteRecipe(recipe.id);
-      onDeleted();
+      onDeleted?.();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -131,6 +143,7 @@ function RecipeDetail({ recipe, onClose, onDeleted }: { recipe: Recipe; onClose:
           {recipe.isCustom && <span className="badge yours">Yours</span>}
           {recipe.yieldText && <span className="badge subtle">Makes {recipe.yieldText}</span>}
         </div>
+        {note && <p className="detail-note">{note}</p>}
         {recipe.description && <p>{recipe.description}</p>}
         <p className="macros big">
           {recipe.macros.calories != null ? (
@@ -175,7 +188,7 @@ function RecipeDetail({ recipe, onClose, onDeleted }: { recipe: Recipe; onClose:
         )}
         {!recipe.sourceUrl && recipe.sourceName && <p className="muted">Source: {recipe.sourceName}</p>}
         {error && <p className="error">{error}</p>}
-        {recipe.isCustom && (
+        {recipe.isCustom && onDeleted && (
           <button className="danger" onClick={remove}>
             Delete this recipe
           </button>
