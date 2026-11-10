@@ -1,6 +1,6 @@
 // FuelLab service worker: makes the app installable and keeps the app shell loading
 // with a weak signal. API calls (/api/*) always go to the network, so plans and logs are never stale.
-const CACHE = 'fuellab-shell-v1'; // bump when icons or the shell change so phones drop old copies
+const CACHE = 'fuellab-shell-v2'; // bump when icons or the shell change so phones drop old copies
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

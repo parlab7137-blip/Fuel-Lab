@@ -168,7 +168,9 @@ button.strip-day.active { border-color: var(--green); background: #eef6f0; }
   font-size: 14px;
 }
 
-.auth-logo { margin-bottom: 8px; }
+.auth-logo { margin: 0 0 12px; display: flex; justify-content: center; }
+.logo-full { display: block; border-radius: 18px; }
+.logo-mark { display: block; border-radius: 7px; }
 .logo { display: inline-flex; align-items: center; gap: 8px; }
 .logo svg { flex: none; }
 

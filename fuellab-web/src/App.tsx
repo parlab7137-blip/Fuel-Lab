@@ -5,7 +5,7 @@ import RecipesView from './views/RecipesView';
 import PlannerView from './views/PlannerView';
 import ShoppingView from './views/ShoppingView';
 import TodayView from './views/TodayView';
-import Logo from './components/Logo';
+import Logo, { FullLogo } from './components/Logo';
 import UpdateBanner from './components/UpdateBanner';
 import SettingsView from './views/SettingsView';
 
@@ -44,8 +44,9 @@ function AuthScreen() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-logo"><Logo size={56} /></div>
-        <h1>FuelLab</h1>
+        <h1 className="auth-logo">
+          <FullLogo size={180} />
+        </h1>
         <p className="muted">Plan the week, shop once, and let the plan drive your calorie counter.</p>
         <form onSubmit={submit} className="form">
           {mode === 'register' && (
