@@ -33,12 +33,22 @@ export default function SettingsView() {
 
   return (
     <div className="settings">
-      <h2>Household settings</h2>
-      <p className="muted">
-        Signed in as {user?.name} ({user?.email}). Household size drives the planner's default servings; targets drive the
-        Today counter.
-      </p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Settings</h1>
+        </div>
+      </div>
+      <div className="panel account">
+        <span className="avatar big">{(user?.name ?? '?').trim().charAt(0).toUpperCase()}</span>
+        <div>
+          <strong>{user?.name}</strong>
+          <div className="muted small">{user?.email}</div>
+        </div>
+      </div>
       <form onSubmit={submit} className="form narrow">
+        <div className="panel">
+        <h2 className="panel-title">Household</h2>
+        <p className="muted small">Sets how many servings new meals in the Planner start with.</p>
         <label>
           Household size (people you cook for)
           <input
@@ -49,8 +59,10 @@ export default function SettingsView() {
             onChange={(e) => setSettings({ ...settings, householdSize: num(e.target.value) })}
           />
         </label>
-        <fieldset>
-          <legend>Daily targets</legend>
+        </div>
+        <div className="panel">
+          <h2 className="panel-title">Daily targets</h2>
+          <p className="muted small">What the ring and bars on Today count toward.</p>
           <div className="row">
             <label>
               Calories
@@ -69,13 +81,13 @@ export default function SettingsView() {
               <input type="number" min="0" value={settings.targets.fat} onChange={(e) => setSettings({ ...settings, targets: { ...settings.targets, fat: num(e.target.value) } })} />
             </label>
           </div>
-        </fieldset>
+        </div>
         {error && <p className="error">{error}</p>}
         <button className="primary" type="submit">
           {saved ? 'Saved ✓' : 'Save settings'}
         </button>
       </form>
-      <button className="danger" onClick={logout}>
+      <button className="danger logout" onClick={logout}>
         Log out
       </button>
     </div>

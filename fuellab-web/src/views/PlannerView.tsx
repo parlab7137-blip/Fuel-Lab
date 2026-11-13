@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { addDays, mealBadge, weekStartOf, type MealType, type PlanItem, type Recipe } from '@fuellab/shared';
+import { addDays, weekStartOf, type MealType, type PlanItem, type Recipe } from '@fuellab/shared';
 import { api, todayLocal } from '../api';
+import { shortDate, weekRange } from '../format';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const SLOTS: MealType[] = ['breakfast', 'lunch', 'dinner'];
@@ -41,40 +42,56 @@ export default function PlannerView() {
 
   return (
     <div>
-      <div className="toolbar">
-        <button onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev week</button>
-        <strong>Week of {weekStart}</strong>
-        <button onClick={() => setWeekStart(addDays(weekStart, 7))}>Next week →</button>
-        <button onClick={() => setWeekStart(weekStartOf(todayLocal()))}>This week</button>
-        <span className="muted">New meals default to {householdSize} servings (household size)</span>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Planner</h1>
+          <p className="muted page-sub">
+            {weekRange(weekStart)} · new meals default to {householdSize} serving{householdSize === 1 ? '' : 's'}
+          </p>
+        </div>
+        <div className="step-nav">
+          {weekStart !== weekStartOf(todayLocal()) && (
+            <button className="pill-btn" onClick={() => setWeekStart(weekStartOf(todayLocal()))}>
+              This week
+            </button>
+          )}
+          <button className="round-btn" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">
+            ‹
+          </button>
+          <button className="round-btn" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">
+            ›
+          </button>
+        </div>
       </div>
       {error && <p className="error">{error}</p>}
       <div className="week">
         {DAYS.map((day, dayIndex) => (
-          <div key={day} className="day">
+          <div key={day} className={addDays(weekStart, dayIndex) === todayLocal() ? 'day is-today' : 'day'}>
             <h3>
-              {day} <span className="muted small">{addDays(weekStart, dayIndex).slice(5)}</span>
+              {day} <span className="day-date">{shortDate(addDays(weekStart, dayIndex))}</span>
+              {addDays(weekStart, dayIndex) === todayLocal() && <span className="today-tag">Today</span>}
             </h3>
             {SLOTS.map((slot) => (
               <div key={slot} className="slot">
                 <div className="slot-head">
                   <span className="slot-name">{slot}</span>
-                  <span className="badge subtle">{mealBadge(slot)}</span>
                 </div>
                 {items
                   .filter((i) => i.dayIndex === dayIndex && i.recipe.mealType === slot)
                   .map((item) => (
                     <div key={item.id} className="plan-item">
-                      <span>
+                      <span className="plan-name">
                         {item.recipe.name}
-                        {item.recipe.isCustom && <span className="badge yours">Yours</span>}
+                        <span className="muted small plan-serv">
+                          {item.servings} serving{item.servings === 1 ? '' : 's'}
+                          {item.recipe.isCustom ? ' · yours' : ''}
+                        </span>
                       </span>
-                      <span className="muted small">×{item.servings} servings</span>
                       <button className="icon" onClick={() => remove(item.id)} aria-label="Remove">✕</button>
                     </div>
                   ))}
                 <button className="add" onClick={() => setPicker({ dayIndex, mealType: slot })}>
-                  + Add
+                  + Add {slot}
                 </button>
               </div>
             ))}
@@ -86,7 +103,7 @@ export default function PlannerView() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h2>
-                Add {picker.mealType} — {DAYS[picker.dayIndex]}
+                Add {picker.mealType} · {DAYS[picker.dayIndex]} {shortDate(addDays(weekStart, picker.dayIndex))}
               </h2>
               <button className="icon" onClick={() => setPicker(null)} aria-label="Close">✕</button>
             </div>
@@ -95,7 +112,7 @@ export default function PlannerView() {
                 .filter((r) => r.mealType === picker.mealType)
                 .map((r) => (
                   <button key={r.id} className="picker-item" onClick={() => add(r.id)}>
-                    <span>{r.name}{r.isCustom ? ' · Yours' : ''}</span>
+                    <span className="picker-name">{r.name}{r.isCustom ? ' · Yours' : ''}</span>
                     <span className="muted small">
                       {r.macros.calories != null ? `${r.macros.calories} kcal · ${r.macros.protein ?? '—'}g protein` : 'macros not listed'}
                     </span>

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { addDays, type DayTotals, type Recipe, type Targets, type TodayResponse, type WeekLogDay } from '@fuellab/shared';
 import { api, todayLocal } from '../api';
 import { RecipeDetail } from './RecipesView';
+import { greeting, longDate, relativeDay } from '../format';
 
 function Ring({ value, target }: { value: number; target: number }) {
   const pct = target > 0 ? Math.min(1, value / target) : 0;
@@ -49,14 +50,25 @@ function Bar({ label, value, target, unit }: { label: string; value: number; tar
 }
 
 function TotalsBlock({ totals, targets }: { totals: DayTotals; targets: Targets }) {
+  const left = Math.round(targets.calories - totals.calories);
   return (
     <div className="today-head">
       <Ring value={totals.calories} target={targets.calories} />
       <div className="bars">
+        <p className={left >= 0 ? 'kcal-left' : 'kcal-left over'}>
+          {left >= 0 ? (
+            <>
+              <strong>{left}</strong> kcal left
+            </>
+          ) : (
+            <>
+              <strong>{-left}</strong> kcal over
+            </>
+          )}
+        </p>
         <Bar label="Protein" value={totals.protein} target={targets.protein} unit="g" />
         <Bar label="Carbs" value={totals.carbs} target={targets.carbs} unit="g" />
         <Bar label="Fat" value={totals.fat} target={targets.fat} unit="g" />
-        <p className="muted small">{Math.max(0, targets.calories - totals.calories)} kcal left today</p>
       </div>
     </div>
   );
@@ -138,17 +150,33 @@ export default function TodayView() {
 
   return (
     <div>
-      <div className="toolbar">
-        <button onClick={() => setDate(addDays(date, -1))}>←</button>
-        <strong>{date === todayLocal() ? `Today · ${date}` : date}</strong>
-        <button onClick={() => setDate(addDays(date, 1))}>→</button>
-        {date !== todayLocal() && <button onClick={() => setDate(todayLocal())}>Back to today</button>}
+      <div className="page-head day-nav">
+        <div>
+          <p className="eyebrow">{date === todayLocal() ? greeting() : longDate(date)}</p>
+          <h1 className="page-title">{relativeDay(date, todayLocal())}</h1>
+          {date === todayLocal() && <p className="muted page-sub">{longDate(date)}</p>}
+        </div>
+        <div className="step-nav">
+          {date !== todayLocal() && (
+            <button className="pill-btn" onClick={() => setDate(todayLocal())}>
+              Today
+            </button>
+          )}
+          <button className="round-btn" onClick={() => setDate(addDays(date, -1))} aria-label="Previous day">
+            ‹
+          </button>
+          <button className="round-btn" onClick={() => setDate(addDays(date, 1))} aria-label="Next day">
+            ›
+          </button>
+        </div>
       </div>
       {error && <p className="error">{error}</p>}
       <TotalsBlock totals={today.totals} targets={today.targets} />
 
-      <h3>Planned for today</h3>
-      {today.planned.length === 0 && <p className="muted">Nothing planned — add meals in the Planner.</p>}
+      <h2 className="section-title">
+        Planned <span className="count">{today.planned.length}</span>
+      </h2>
+      {today.planned.length === 0 && <p className="empty">Nothing planned for this day. Add meals in the Planner.</p>}
       <ul className="today-list">
         {today.planned.map(({ planItem, logEntryId }) => (
           <li key={planItem.id} className="planned">
@@ -171,7 +199,7 @@ export default function TodayView() {
               <span className="planned-link">{opening === planItem.recipeId ? "Opening…" : "View recipe ›"}</span>
             </button>
             {logEntryId ? (
-              <span className="badge hp">✓ Logged</span>
+              <span className="badge done">✓ Logged</span>
             ) : (
               <button className="primary small-btn" onClick={() => confirm(planItem.id)}>
                 Ate it ✓
@@ -188,13 +216,15 @@ export default function TodayView() {
         />
       )}
 
-      <h3>Logged</h3>
-      {today.entries.length === 0 && <p className="muted">Nothing logged yet today.</p>}
+      <h2 className="section-title">
+        Logged <span className="count">{today.entries.length}</span>
+      </h2>
+      {today.entries.length === 0 && <p className="empty">Nothing logged yet. Tap "Ate it" on a planned meal, or quick add below.</p>}
       <ul className="today-list">
         {today.entries.map((entry) => (
-          <li key={entry.id}>
-            <span>
-              {entry.name}{' '}
+          <li key={entry.id} className="logged">
+            <span className="logged-info">
+              <span className="logged-name">{entry.name}</span>
               <span className="muted small">
                 {entry.perServing.calories != null
                   ? `${Math.round((entry.perServing.calories ?? 0) * entry.servingsEaten)} kcal · ${
@@ -205,9 +235,11 @@ export default function TodayView() {
               </span>
             </span>
             <span className="servings-ctl">
-              <button onClick={() => setServings(entry.id, 0.5)}>½×</button>
-              <button onClick={() => setServings(entry.id, 1)}>1×</button>
-              <button onClick={() => setServings(entry.id, 2)}>2×</button>
+              {[0.5, 1, 2].map((v) => (
+                <button key={v} className={entry.servingsEaten === v ? 'seg active' : 'seg'} onClick={() => setServings(entry.id, v)}>
+                  {v === 0.5 ? '½' : v}×
+                </button>
+              ))}
               <input
                 type="number"
                 step="0.25"
@@ -226,17 +258,25 @@ export default function TodayView() {
         ))}
       </ul>
 
-      <h3>Quick add (off-plan food)</h3>
+      <details className="quick-add">
+        <summary>
+          <span className="quick-plus">+</span>
+          <span>
+            <strong>Quick add</strong>
+            <span className="muted small">Log food that wasn't on the plan</span>
+          </span>
+        </summary>
       <form onSubmit={quickAdd} className="quick-form">
         <input required placeholder="What did you eat?" value={quick.name} onChange={(e) => setQuick({ ...quick, name: e.target.value })} />
         <input required type="number" min="0" placeholder="Calories" value={quick.calories} onChange={(e) => setQuick({ ...quick, calories: e.target.value })} />
         <input required type="number" min="0" placeholder="Protein (g)" value={quick.protein} onChange={(e) => setQuick({ ...quick, protein: e.target.value })} />
-        <input type="number" min="0" placeholder="Carbs (g, optional)" value={quick.carbs} onChange={(e) => setQuick({ ...quick, carbs: e.target.value })} />
-        <input type="number" min="0" placeholder="Fat (g, optional)" value={quick.fat} onChange={(e) => setQuick({ ...quick, fat: e.target.value })} />
-        <button className="primary" type="submit">Add</button>
+        <input type="number" min="0" placeholder="Carbs (g)" value={quick.carbs} onChange={(e) => setQuick({ ...quick, carbs: e.target.value })} />
+        <input type="number" min="0" placeholder="Fat (g)" value={quick.fat} onChange={(e) => setQuick({ ...quick, fat: e.target.value })} />
+        <button className="primary" type="submit">Add to log</button>
       </form>
+      </details>
 
-      <h3>This week</h3>
+      <h2 className="section-title">This week</h2>
       <div className="week-strip">
         {week.map((day) => {
           const pct = today.targets.calories > 0 ? Math.min(100, (day.totals.calories / today.targets.calories) * 100) : 0;

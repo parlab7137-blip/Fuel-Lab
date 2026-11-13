@@ -31,10 +31,20 @@ export default function RecipesView() {
 
   return (
     <div>
-      <div className="toolbar">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Recipes</h1>
+          <p className="muted page-sub">{recipes.length} recipe{recipes.length === 1 ? '' : 's'}</p>
+        </div>
+        <button className="primary" onClick={() => setShowForm(true)}>
+          + New recipe
+        </button>
+      </div>
+      <div className="filter-bar">
         <input
           className="search"
-          placeholder="Search recipes or ingredients…"
+          type="search"
+          placeholder="Search recipes or ingredients"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -44,46 +54,30 @@ export default function RecipesView() {
               {f.label}
             </button>
           ))}
+          <button className={highProtein ? 'chip active' : 'chip'} aria-pressed={highProtein} onClick={() => setHighProtein(!highProtein)}>
+            High protein
+          </button>
+          <select className="chip-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+            <option value="name">A to Z</option>
+            <option value="protein">Most protein</option>
+            <option value="calories">Fewest calories</option>
+          </select>
         </div>
-        <label className="toggle">
-          <input type="checkbox" checked={highProtein} onChange={(e) => setHighProtein(e.target.checked)} />
-          High protein (30g+)
-        </label>
-        <select value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="name">Sort: name</option>
-          <option value="protein">Sort: most protein</option>
-          <option value="calories">Sort: fewest calories</option>
-        </select>
-        <button className="primary" onClick={() => setShowForm(true)}>
-          + Add your own
-        </button>
       </div>
       {error && <p className="error">{error}</p>}
-      <p className="muted">{recipes.length} recipes</p>
+      {recipes.length === 0 && <p className="empty">No recipes match. Try a different search or filter.</p>}
       <div className="grid">
         {recipes.map((r) => (
-          <button key={r.id} className="card" onClick={() => setSelected(r)}>
+          <button key={r.id} className={`card meal-${r.mealType}`} onClick={() => setSelected(r)}>
             <div className="card-head">
               <span className="card-title">{r.name}</span>
               {r.isCustom && <span className="badge yours">Yours</span>}
             </div>
             <div className="badges">
               <span className="badge">{r.mealType}</span>
-              <span className="badge subtle">{mealBadge(r.mealType)}</span>
               {isHighProtein(r) && <span className="badge hp">High protein</span>}
             </div>
-            <div className="macros">
-              {r.macros.calories != null ? (
-                <>
-                  <span>{r.macros.calories} kcal</span>
-                  <span>{r.macros.protein ?? '—'}g protein</span>
-                  <span>{r.macros.carbs ?? '—'}g carbs</span>
-                  <span>{r.macros.fat ?? '—'}g fat</span>
-                </>
-              ) : (
-                <span className="muted">macros not listed</span>
-              )}
-            </div>
+            <MacroStats recipe={r} />
             {(r.prepMinutes != null || r.cookMinutes != null) && (
               <div className="muted small">
                 {r.prepMinutes != null ? `Prep ${r.prepMinutes}m` : ''}
@@ -104,6 +98,28 @@ export default function RecipesView() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Calories, protein, carbs and fat as small stat tiles. */
+function MacroStats({ recipe, big }: { recipe: Recipe; big?: boolean }) {
+  const m = recipe.macros;
+  if (m.calories == null) return <p className="muted small">Macros not listed</p>;
+  const stats: [string, string][] = [
+    [String(m.calories), 'kcal'],
+    [`${m.protein ?? '—'}g`, 'protein'],
+    [`${m.carbs ?? '—'}g`, 'carbs'],
+    [`${m.fat ?? '—'}g`, 'fat'],
+  ];
+  return (
+    <div className={big ? 'stats big' : 'stats'}>
+      {stats.map(([v, l]) => (
+        <span key={l} className="stat">
+          <strong>{v}</strong>
+          <span>{l}</span>
+        </span>
+      ))}
     </div>
   );
 }
@@ -145,20 +161,16 @@ export function RecipeDetail({
         </div>
         {note && <p className="detail-note">{note}</p>}
         {recipe.description && <p>{recipe.description}</p>}
-        <p className="macros big">
-          {recipe.macros.calories != null ? (
-            <>
-              <span>{recipe.macros.calories} kcal</span>
-              <span>{recipe.macros.protein ?? '—'}g protein</span>
-              <span>{recipe.macros.carbs ?? '—'}g carbs</span>
-              <span>{recipe.macros.fat ?? '—'}g fat</span>
-              <span className="muted">per serving</span>
-            </>
-          ) : (
-            <span className="muted">Macros not listed for this recipe</span>
-          )}
-        </p>
-        <h3>Ingredients{recipe.baseServings ? ` (for ${recipe.baseServings} servings)` : ''}</h3>
+        <MacroStats recipe={recipe} big />
+        {recipe.macros.calories != null && <p className="muted small per-serving">Per serving</p>}
+        {(recipe.prepMinutes != null || recipe.cookMinutes != null) && (
+          <p className="muted small">
+            {recipe.prepMinutes != null ? `Prep ${recipe.prepMinutes} min` : ''}
+            {recipe.prepMinutes != null && recipe.cookMinutes != null ? ' · ' : ''}
+            {recipe.cookMinutes != null ? `Cook ${recipe.cookMinutes} min` : ''}
+          </p>
+        )}
+        <h3 className="detail-h">Ingredients{recipe.baseServings ? ` (for ${recipe.baseServings} servings)` : ''}</h3>
         <ul className="ingredients">
           {recipe.ingredients.map((ing, i) => (
             <li key={i}>
@@ -168,7 +180,7 @@ export function RecipeDetail({
             </li>
           ))}
         </ul>
-        <h3>Method</h3>
+        <h3 className="detail-h">Method</h3>
         {recipe.instructions ? (
           <ol className="steps">
             {recipe.instructions.split('\n').filter((s) => s.trim()).map((step, i) => (
@@ -179,7 +191,7 @@ export function RecipeDetail({
           <p className="muted">No written steps in the box for this one — it links out to the original video.</p>
         )}
         {recipe.sourceUrl && (
-          <p>
+          <p className="source">
             Source:{' '}
             <a href={recipe.sourceUrl} target="_blank" rel="noreferrer">
               {recipe.sourceName ?? recipe.sourceUrl}

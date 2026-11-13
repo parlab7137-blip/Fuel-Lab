@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { FormEvent } from 'react';
 import { AuthProvider, useAuth } from './auth';
 import RecipesView from './views/RecipesView';
@@ -8,15 +9,16 @@ import TodayView from './views/TodayView';
 import Logo, { FullLogo } from './components/Logo';
 import UpdateBanner from './components/UpdateBanner';
 import SettingsView from './views/SettingsView';
+import { PlannerIcon, RecipesIcon, SettingsIcon, ShoppingIcon, TodayIcon } from './components/Icons';
 
 type Tab = 'today' | 'recipes' | 'planner' | 'shopping' | 'settings';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'today', label: 'Today' },
-  { key: 'recipes', label: 'Recipes' },
-  { key: 'planner', label: 'Planner' },
-  { key: 'shopping', label: 'Shopping' },
-  { key: 'settings', label: 'Settings' },
+const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
+  { key: 'today', label: 'Today', icon: <TodayIcon /> },
+  { key: 'recipes', label: 'Recipes', icon: <RecipesIcon /> },
+  { key: 'planner', label: 'Planner', icon: <PlannerIcon /> },
+  { key: 'shopping', label: 'Shopping', icon: <ShoppingIcon /> },
+  { key: 'settings', label: 'Settings', icon: <SettingsIcon /> },
 ];
 
 function AuthScreen() {
@@ -47,7 +49,7 @@ function AuthScreen() {
         <h1 className="auth-logo">
           <FullLogo size={180} />
         </h1>
-        <p className="muted">Plan the week, shop once, and let the plan drive your calorie counter.</p>
+        <p className="auth-tagline">Plan the week, shop once, and let the plan drive your calorie counter.</p>
         <form onSubmit={submit} className="form">
           {mode === 'register' && (
             <label>
@@ -68,7 +70,7 @@ function AuthScreen() {
             {busy ? '…' : mode === 'login' ? 'Log in' : 'Create household account'}
           </button>
         </form>
-        <button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+        <button className="link auth-switch" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? 'No account yet? Create one' : 'Already have an account? Log in'}
         </button>
       </div>
@@ -89,12 +91,21 @@ function Shell() {
         <span className="logo"><Logo size={28} /> FuelLab</span>
         <nav>
           {TABS.map((t) => (
-            <button key={t.key} className={tab === t.key ? 'nav active' : 'nav'} onClick={() => setTab(t.key)}>
-              {t.label}
+            <button
+              key={t.key}
+              className={tab === t.key ? 'nav active' : 'nav'}
+              aria-current={tab === t.key ? 'page' : undefined}
+              onClick={() => {
+                setTab(t.key);
+                window.scrollTo({ top: 0 });
+              }}
+            >
+              <span className="nav-icon">{t.icon}</span>
+              <span className="nav-label">{t.label}</span>
             </button>
           ))}
         </nav>
-        <span className="muted small">{user.name}</span>
+        <span className="avatar" title={user.name}>{user.name.trim().charAt(0).toUpperCase() || '?'}</span>
       </header>
       <main>
         {tab === 'today' && <TodayView />}

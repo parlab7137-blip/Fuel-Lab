@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { addDays, weekStartOf, type ShoppingGroup } from '@fuellab/shared';
 import { api, todayLocal } from '../api';
+import { weekRange } from '../format';
 
 export default function ShoppingView() {
   const [weekStart, setWeekStart] = useState(() => weekStartOf(todayLocal()));
@@ -30,18 +31,49 @@ export default function ShoppingView() {
 
   return (
     <div>
-      <div className="toolbar">
-        <button onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev week</button>
-        <strong>Shopping for week of {weekStart}</strong>
-        <button onClick={() => setWeekStart(addDays(weekStart, 7))}>Next week →</button>
-        <span className="muted">
-          {total === 0 ? 'Nothing planned this week yet' : `${done}/${total} picked up`}
-        </span>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Shopping</h1>
+          <p className="muted page-sub">For {weekRange(weekStart)}</p>
+        </div>
+        <div className="step-nav">
+          {weekStart !== weekStartOf(todayLocal()) && (
+            <button className="pill-btn" onClick={() => setWeekStart(weekStartOf(todayLocal()))}>
+              This week
+            </button>
+          )}
+          <button className="round-btn" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">
+            ‹
+          </button>
+          <button className="round-btn" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">
+            ›
+          </button>
+        </div>
       </div>
+      {total === 0 ? (
+        <p className="empty">Nothing planned this week yet. Add meals in the Planner and the list builds itself.</p>
+      ) : (
+        <div className="shop-progress">
+          <div className="shop-progress-text">
+            <strong>
+              {done} of {total}
+            </strong>{' '}
+            <span className="muted">{done === total ? 'all picked up' : 'picked up'}</span>
+          </div>
+          <div className="bar">
+            <div className="bar-fill" style={{ width: `${(done / total) * 100}%` }} />
+          </div>
+        </div>
+      )}
       {error && <p className="error">{error}</p>}
       {groups.map((group) => (
         <section key={group.section} className="shop-group">
-          <h3>{group.section}</h3>
+          <h3>
+            {group.section}{' '}
+            <span className="count">
+              {group.lines.filter((l) => l.checked).length}/{group.lines.length}
+            </span>
+          </h3>
           <ul>
             {group.lines.map((line) => (
               <li key={line.key} className={line.checked ? 'checked' : ''}>
@@ -51,7 +83,7 @@ export default function ShoppingView() {
                     {line.amount != null ? `${line.amount} ` : ''}
                     {line.unit ? `${line.unit} ` : ''}
                     {line.name}
-                    {line.amount == null ? ' (amount varies)' : ''}
+                    {line.amount == null ? <em className="muted"> amount varies</em> : null}
                   </span>
                 </label>
               </li>
